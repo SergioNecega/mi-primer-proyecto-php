@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Usuarios - LAMP Stack</title>
+    <title>Registro y Listado de Usuarios - LAMP Stack</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 480px; margin: 40px auto; padding: 20px; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: 600; }
         input[type="text"], input[type="email"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
@@ -14,6 +14,13 @@
         #mensaje { margin-top: 15px; padding: 12px; display: none; border-radius: 4px; font-size: 0.9em; }
         .exito { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        
+        /* Estilos de la Tabla */
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .sin-datos { text-align: center; color: #777; font-style: italic; }
     </style>
 </head>
 <body>
@@ -36,11 +43,59 @@
 
     <div id="mensaje"></div>
 
+    <h2>Usuarios Registrados</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Fecha de Registro</th>
+            </tr>
+        </thead>
+        <tbody id="tablaUsuarios">
+            <tr><td colspan="4" class="sin-datos">Cargando usuarios...</td></tr>
+        </tbody>
+    </table>
+
     <script>
         const form = document.getElementById('formUsuario');
         const mensajeDiv = document.getElementById('mensaje');
         const btnGuardar = document.getElementById('btnGuardar');
+        const tablaUsuarios = document.getElementById('tablaUsuarios');
 
+        // Función para obtener y listar usuarios desde el backend
+        async function cargarUsuarios() {
+            try {
+                const response = await fetch('listar.php');
+                const result = await response.json();
+
+                if (result.success && result.data.length > 0) {
+                    tablaUsuarios.innerHTML = result.data.map(u => `
+                        <tr>
+                            <td>${u.id}</td>
+                            <td>${escapeHTML(u.nombre)}</td>
+                            <td>${escapeHTML(u.email)}</td>
+                            <td>${u.creado_en}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tablaUsuarios.innerHTML = '<tr><td colspan="4" class="sin-datos">No hay usuarios registrados</td></tr>';
+                }
+            } catch (error) {
+                tablaUsuarios.innerHTML = '<tr><td colspan="4" class="sin-datos">Error al cargar la lista</td></tr>';
+            }
+        }
+
+        // Función para evitar ataques XSS
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // Evento de envío del formulario
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -65,6 +120,7 @@
 
                 if (data.success) {
                     form.reset();
+                    cargarUsuarios(); // Recargar la tabla automáticamente sin refrescar la página
                 }
             } catch (error) {
                 mensajeDiv.style.display = 'block';
@@ -74,6 +130,9 @@
                 btnGuardar.disabled = false;
             }
         });
+
+        // Cargar usuarios al iniciar la página
+        cargarUsuarios();
     </script>
 </body>
 </html>
